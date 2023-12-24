@@ -8,10 +8,12 @@ Original file is located at
 """
 
 
-
+import json
 from agency_swarm import set_openai_key
 from getpass import getpass
-set_openai_key( input( "Please enter your openai key: " ))
+# https://platform.openai.com/api-keys
+# set_openai_key( input( "Please enter your openai key: " ))
+set_openai_key( "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" )
 
 """# CEO Agent
 
@@ -49,7 +51,8 @@ from langchain.tools import format_tool_to_openai_function
 from langchain.tools.zapier.tool import ZapierNLARunAction
 
 # https://nla.zapier.com/docs/authentication/
-os.environ["ZAPIER_NLA_API_KEY"] = input("Your Zapier NLA Key: ")
+# os.environ["ZAPIER_NLA_API_KEY"] = input("Your Zapier NLA Key: ")
+os.environ["ZAPIER_NLA_API_KEY"] = "sk-ak-RI4Y9l198rcNuamSPFTgRt9nR2"
 
 from agency_swarm import BaseTool
 from pydantic import Field
@@ -225,15 +228,92 @@ dev = Agent(name="Developer",
             description="Responsible for running and executing Python Programs.",
             instructions=dev_instructions,
             files_folder=None,
-            tools=[ExecuteCommand, Program])
+            tools=[ ExecuteCommand, Program ])
+
+cpp_dev = Agent(name="CppDeveloper",
+            description="Responsible for designing C++ objects.",
+            instructions="./cpp_instructions.md",
+            files_folder=None,
+            tools=[ ExecuteCommand, Program ])
+
+class UpdateTaskStatus(BaseTool):
+    task_id: str = Field(..., description="The unique identifier of the task to be updated.")
+    new_status: str = Field(..., description="The new status of the task.")
+
+
+    def run(self):
+        import logging
+
+        try:
+            # make the project_tracker_memory directory it it doesn't exist.
+            if not os.path.exists('project_tracker_memory'):
+                os.makedirs('project_tracker_memory')
+
+            # Load the existing tasks from settings.json
+            with open('./project_tracker_memory/settings.json', 'r') as file:
+                tasks = json.load(file)
+
+            # Update the status of the specified task
+            if self.task_id in tasks:
+                tasks[self.task_id]['status'] = self.new_status
+                with open('./project_tracker_memory/settings.json', 'w') as file:
+                    json.dump(tasks, file, indent=4)
+                return f"Task {self.task_id} updated to {self.new_status}."
+            else:
+                return f"Task {self.task_id} not found."
+        except FileNotFoundError:
+            logging.error("settings.json file not found.")
+            return "Error: settings.json file not found."
+        except json.JSONDecodeError:
+            logging.error("Error decoding settings.json.")
+            return "Error: Could not decode settings.json."
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {e}")
+            return f"An unexpected error occurred: {e}"
+
+
+class GetProjectStatus(BaseTool):
+    """
+    Tool for retrieving the current status of all tasks in the project management system.
+    """
+
+    def run(self):
+        # Load the existing tasks from settings.json
+        try:
+            with open('settings.json', 'r') as file:
+                tasks = json.load(file)
+        except FileNotFoundError:
+            return "No tasks found. The settings.json file does not exist."
+
+        # Check if there are any tasks
+        if not tasks:
+            return "There are currently no tasks in the project."
+
+        # Construct a summary of task statuses
+        status_summary = "Current Project Status:\n"
+        for task_id, task_info in tasks.items():
+            status_summary += f"- Task {task_id}: Status - {task_info['status']}\n"
+
+        return status_summary
+
+project_tracker_instructions = """# Instructions for Project Tracker Agent
+- Track and update the status of various tasks as per the project plans.
+- Provide regular updates on project progress.
+- Work in coordination with other agents for smooth project execution."""
+
+project_tracker = Agent(name="Project Tracker",
+                        description="Responsible for tracking project progress and task management.",
+                        instructions=project_tracker_instructions,
+                        files_folder=None,
+                        tools=[UpdateTaskStatus, GetProjectStatus])
 
 """# Create Agency"""
 
-agency_manifesto = """# "VRSEN AI" Agency Manifesto
+agency_manifesto = """# "AI" Agency Manifesto
 
-You are a part of a virtual AI development agency called "VRSEN AI"
+You are a part of a virtual AI development agency called "Agency Swarm".
 
-Your mission is to empower businesses to navigate the AI revolution successfully."""
+Your mission is to keep track of what is done in each project and what needs to be done yet in each project."""
 
 from agency_swarm import Agency
 
@@ -241,9 +321,19 @@ agency = Agency([
     ceo,
     [ceo, dev],
     [ceo, va],
-    [dev, va]
+    [dev, va],
+    [ceo, cpp_dev],
+    [dev, cpp_dev],
+    [va, cpp_dev],
+    [cpp_dev, project_tracker],
+    [ceo, project_tracker],
+    [dev, project_tracker],
+    [va, project_tracker],
+    [],
 ], shared_instructions=agency_manifesto)
+
 
 """# Demo with Gradio"""
 
-agency.demo_gradio(height=900)
+# agency.demo_gradio(height=400)
+agency.run_demo()

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>TDD Automation System Design</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+}
+
+h1, h2 {
+  color: #2F4F4F;
+}
+
+.object {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.object h2 {
+  color: #fff;
+  background-color: #2F4F4F;
+  padding: 5px;
+  margin: -10px -10px 10px -10px; 
+}
+
+</style>
+</head>
+<body>
+
+<h1>Python Objects for C++ TDD Automation System</h1>
+
+<div class="object">
+<h2>TestCreator</h2>  
+<p>Analyzes C++ code signatures and proposes initial failing test cases.</p>
+<p>Key Methods:</p>
+<ul>
+  <li>analyze_code()</li>
+  <li>generate_test_cases()</li>
+</ul>  
+</div>
+
+<div class="object">
+<h2>Compiler</h2>
+<p>Compiles C++ code and test code into executables.</p>
+<p>Key Methods:</p>  
+<ul>
+  <li>compile_code()</li>
+  <li>compile_tests()</li>
+</ul>
+</div>
+
+<div class="object">  
+<h2>TestRunner</h2>
+<p>Executes compiled C++ test code and outputs results.</p> 
+<p>Key Methods:</p>
+<ul>
+  <li>run_tests()</li>
+  <li>output_results()</li>
+</ul>
+</div>
+
+<div class="object">
+<h2>CodeImplementer</h2>
+<p>Implements just enough C++ code to get a failing test to pass.</p>
+<p>Key Methods:</p>
+<ul>
+  <li>implement_passing_code()</li>
+</ul>  
+</div>
+
+<div class="object">
+<h2>RefactoringAgent</h2> 
+<p>Refactors C++ code to improve structure and design.</p>
+<p>Key Methods:</p>
+<ul>
+  <li>refactor_code()</li>
+</ul>
+</div>
+
+<div class="object">
+<h2>RegressionTester</h2>
+<p>Runs regression tests after code changes to detect issues.</p>
+<p>Key Methods:</p>  
+<ul>
+  <li>run_regression_tests()</li>
+</ul> 
+</div>
+
+<div class="object">
+<h2>CoverageAnalyzer</h2>  
+<p>Checks test coverage of code and adds tests for gaps.</p>
+<p>Key Methods:</p>
+<ul>
+  <li>analyze_coverage()</li>
+  <li>add_missing_tests()</li>  
+</ul>
+</div>
+
+<div class="object">
+<h2>TestCaseOptimizer</h2>
+<p>Optimizes and improves existing test cases.</p>
+<p>Key Methods:</p>
+<ul>
+  <li>optimize_tests()</li>
+</ul>
+</div>
+
+<div class="object">
+<h2>CIOrchestrator</h2>
+<p>Manages continuous integration pipeline.</p> 
+<p>Key Methods:</p>
+<ul>
+  <li>run_pipeline()</li>
+</ul>  
+</div>
+
+<div class="object"> 
+<h2>ResultsReporter</h2>
+<p>Reports test results and summaries.</p>
+<p>Key Methods:</p>
+<ul>
+  <li>generate_report()</li>
+</ul>
+</div>
+
+</body>
+</html>

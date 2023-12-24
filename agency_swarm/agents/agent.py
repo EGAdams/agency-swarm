@@ -29,7 +29,7 @@ class Agent():
     def __init__(self, id: str = None, name: str = None, description: str = None, instructions: str = "",
                  tools: List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]] = None,
                  files_folder: Union[List[str], str] = None,
-                 file_ids: List[str] = None, metadata: Dict[str, str] = None, model: str = "gpt-4-1106-preview"):
+                 file_ids: List[str] = None, metadata: Dict[str, str] = None, model: str = "gpt-3.5-turbo-1106"):
         """
         Initializes an Agent with specified attributes, tools, and OpenAI client.
 
@@ -42,7 +42,7 @@ class Agent():
         files_folder (Union[List[str], str], optional): Path or list of paths to directories containing files associated with the agent. Defaults to None.
         file_ids (List[str], optional): List of file IDs for files associated with the agent. Defaults to an empty list.
         metadata (Dict[str, str], optional): Metadata associated with the agent. Defaults to an empty dictionary.
-        model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-4-1106-preview".
+        model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-3.5-turbo-1106".
 
         This constructor sets up the agent with its unique properties, initializes the OpenAI client, reads instructions if provided, and uploads any associated files.
         """

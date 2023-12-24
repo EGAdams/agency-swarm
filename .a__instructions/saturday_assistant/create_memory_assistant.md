@@ -1,0 +1,1 @@
+I need to create an assistant that will receive a set of plans and keep track of what is finished and what yet needs to be done.  It will need to use some type of memory, so for now, we'll just save its memory on my hard drive.

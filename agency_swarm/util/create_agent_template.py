@@ -82,3 +82,9 @@ class ExampleTool(BaseTool):
         \"\"\"Enter your code for tool execution here.\"\"\"
         pass
 """
+
+
+# run main here
+if __name__ == "__main__":
+    create_agent_template()
+    

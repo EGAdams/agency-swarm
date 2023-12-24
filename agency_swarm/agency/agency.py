@@ -131,7 +131,16 @@ class Agency:
         """
         while True:
             console.rule()
-            text = input("USER: ")
+            choice = input( "use file or just type? (f/t)" );
+            if choice == "f":
+                file_name = "first_input.md"
+                try:
+                    with open(file_name, 'r') as f:
+                        text = f.read()
+                except FileNotFoundError:
+                    raise Exception(f"File '{file_name}' not found.")
+            elif choice == "t":
+                text = input("USER: ")        
 
             try:
                 gen = self.main_thread.get_completion(message=text)
