@@ -31,8 +31,8 @@ Remember, this tool only supports opening 1 URL at a time. Previous URL will be 
 
         # remove all popups
         js_script = """
-        var popUpSelectors = ['modal', 'popup', 'overlay', 'dialog']; // Add more selectors that are commonly used for pop-ups
-        popUpSelectors.forEach(function(selector) {
+            var popUpSelectors = ['modal', 'popup', 'overlay', 'dialog']; // Add more selectors that are commonly used for pop-ups`````````````
+            popUpSelectors.`````````````forEach(function(selector) {
             var elements = document.querySelectorAll(selector);
             elements.forEach(function(element) {
                 // You can choose to hide or remove; here we're removing the element

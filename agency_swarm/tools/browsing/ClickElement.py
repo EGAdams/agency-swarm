@@ -71,7 +71,14 @@ DOM structure of the page.""".replace("\n", ""),
 
         result = None
         error_count = 0
+        loop_count = 0 
         while True:
+            # increment loop_count
+            loop_count += 1
+            if ( loop_count > 10 ):
+                print ( "Too many expensive loops.  check your wallet!" )
+                break
+            
             response = client.chat.completions.create(
                 model="gpt-4-vision-preview",
                 messages=messages,
