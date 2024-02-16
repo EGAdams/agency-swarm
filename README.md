@@ -1,4 +1,4 @@
-# Agency Swarm
+# 🐝 Agency Swarm
 
 [![Framework](https://firebasestorage.googleapis.com/v0/b/vrsen-ai/o/public%2Fyoutube%2FFramework.png?alt=media&token=ae76687f-0347-4e0c-8342-4c5d31e3f050)](https://youtu.be/M5Pa0pLgyYU?si=f-cQV8FoiGd98uuk)
 
@@ -10,6 +10,7 @@ Agency Swarm is an open-source agent orchestration framework designed to automat
 [![Subscribe on YouTube](https://img.shields.io/youtube/channel/subscribers/UCSv4qL8vmoSH7GaPjuqRiCQ
 )](https://youtube.com/@vrsen/)
 [![Follow on Twitter](https://img.shields.io/twitter/follow/__vrsen__.svg?style=social&label=Follow%20%40__vrsen__)](https://twitter.com/__vrsen__)
+[![Join our Discord!](https://img.shields.io/discord/1200037936352202802?label=Discord)](https://discord.gg/cw2xBaWfFM)
 
 ## Key Features
 
@@ -22,7 +23,7 @@ Agency Swarm is an open-source agent orchestration framework designed to automat
 ## Installation
 
 ```bash
-pip install git+https://github.com/VRSEN/agency-swarm.git
+pip install agency-swarm
 ```
 
 ## Getting Started
@@ -68,9 +69,8 @@ class MyCustomTool(BaseTool):
         # Return the result of the tool's operation
         return "Result of MyCustomTool operation"
 ```
+Import in 1 line of code from [Langchain](https://python.langchain.com/docs/integrations/tools):
 
-**NEW**: Import in 1 line of code from [Langchain](https://python.langchain.com/docs/integrations/tools)
-    
 ```python
 from langchain.tools import YouTubeSearchTool
 from agency_swarm.tools import ToolFactory
@@ -78,7 +78,7 @@ from agency_swarm.tools import ToolFactory
 LangchainTool = ToolFactory.from_langchain_tool(YouTubeSearchTool)
 ```
 
-or 
+or
 
 ```python
 from langchain.agents import load_tools
@@ -90,6 +90,21 @@ tools = load_tools(
 tools = ToolFactory.from_langchain_tools(tools)
 ```
 
+**NEW**: Convert from OpenAPI schemas:
+
+```python
+# using local file
+with open("schemas/your_schema.json") as f:
+    ToolFactory.from_openapi_schema(
+        f.read(),
+    )
+
+# using requests
+ToolFactory.from_openapi_schema(
+    requests.get("https://api.example.com/openapi.json").json(),
+)
+```
+
 
 3. **Define Agent Roles**: Start by defining the roles of your agents. For example, a CEO agent for managing tasks and a developer agent for executing tasks.
 
@@ -99,9 +114,22 @@ from agency_swarm import Agent
 ceo = Agent(name="CEO",
             description="Responsible for client communication, task planning and management.",
             instructions="You must converse with other agents to ensure complete task execution.", # can be a file like ./instructions.md
-            files_folder=None,
+            files_folder="./files", # files to be uploaded to OpenAI
+            schemas_folder="./schemas", # OpenAPI schemas to be converted into tools
             tools=[MyCustomTool, LangchainTool])
 ```
+
+Import from existing agents:
+
+```python
+from agency_swarm.agents.browsing import BrowsingAgent
+
+browsing_agent = BrowsingAgent()
+
+browsing_agent.instructions += "\n\nYou can add additional instructions here."
+```
+
+
 
 4. **Define Agency Communication Flows**: 
 Establish how your agents will communicate with each other.
@@ -139,7 +167,19 @@ Get completion from the agency:
 completion_output = agency.get_completion("Please create a new website for our client.", yield_messages=False)
 ```
 
-## Creating Agent Templates Locally (CLI)
+# CLI
+
+## Genesis Agency
+
+The `genesis` command starts the genesis agency in your terminal to help you create new agencies and agents.
+
+#### **Command Syntax:**
+
+```bash
+agency-swarm genesis [--openai_key "YOUR_API_KEY"]
+```
+
+## Creating Agent Templates Locally
 
 This CLI command simplifies the process of creating a structured environment for each agent.
 
@@ -157,25 +197,28 @@ When you run the `create-agent-template` command, it creates the following folde
 /your-specified-path/
 │
 ├── agency_manifesto.md or .txt # Agency's guiding principles (created if not exists)
-└── agent_name/                 # Directory for the specific agent
-    ├── agent_name.py           # The main agent class file
+└── AgentName/                  # Directory for the specific agent
+    ├── files/                  # Directory for files that will be uploaded to openai
+    ├── schemas/                # Directory for OpenAPI schemas to be converted into tools
+    ├── tools/                  # Directory for tools to be imported by default. 
+    ├── AgentName.py            # The main agent class file
     ├── __init__.py             # Initializes the agent folder as a Python package
     ├── instructions.md or .txt # Instruction document for the agent
-    ├── tools.py                # Tools specific to the agent
-    ├── files/                  # Directory for additional resources
+    └── tools.py                # Custom tools specific to the agent
+    
 ```
 
 This structure ensures that each agent has its dedicated space with all necessary files to start working on its specific tasks. The `tools.py` can be customized to include tools and functionalities specific to the agent's role.
 
 ## Future Enhancements
 
-- Asynchronous communication and task handling.
-- Creation of agencies that can autonomously create other agencies.
-- Inter-agency communication for a self-expanding system.
+1. [x] Creation of agencies that can autonomously create other agencies.
+2. [x] Asynchronous communication and task handling.
+3. [ ] Inter-agency communication for a self-expanding system.
 
 ## Contributing
 
-We welcome contributions to Agency Swarm! Please feel free to submit issues, pull requests, and suggestions to our GitHub repository.
+For details on how to contribute you agents and tools to Agency Swarm, please refer to the [Contributing Guide](CONTRIBUTING.md).
 
 ## License
 
@@ -185,4 +228,4 @@ Agency Swarm is open-source and licensed under [MIT](https://opensource.org/lice
 
 ## Need Help?
 
-If you require assistance in creating custom agent swarms or have any specific queries related to Agency Swarm, feel free to reach out through my website: [vrsen.ai](https://vrsen.ai)
+If you require assistance in creating custom agent swarms or have any specific queries related to Agency Swarm, feel free to reach out through my website: [vrsen.ai](https://vrsen.ai) or schedule a consultation at https://calendly.com/vrsen/ai-project-consultation
