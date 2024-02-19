@@ -7,7 +7,7 @@
 
 
 from agency_swarm import set_openai_key
-set_openai_key("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")
+set_openai_key("")
 
 
 from agency_swarm.agents.browsing import BrowsingAgent
