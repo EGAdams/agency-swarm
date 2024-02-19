@@ -269,21 +269,16 @@ class Agency:
 
         while True:
             console.rule()
-            text = input("👤 USER: ")
-
-            if text.lower() == "exit":
-                break
-
-            recipient_agent = None
-            if "@" in text:
-                recipient_agent = text.split("@")[1].split(" ")[0]
-                text = text.replace(f"@{recipient_agent}", "").strip()
+            choice = input( "use file or just type? (f/t)" );
+            if choice == "f":
+                file_name = "first_input.md"
                 try:
-                    recipient_agent = [agent for agent in self.recipient_agents if agent.lower() == recipient_agent.lower()][0]
-                    recipient_agent = self.get_agent_by_name(recipient_agent)
-                except Exception as e:
-                    print(f"Recipient agent {recipient_agent} not found.")
-                    continue
+                    with open(file_name, 'r') as f:
+                        text = f.read()
+                except FileNotFoundError:
+                    raise Exception(f"File '{file_name}' not found.")
+            elif choice == "t":
+                text = input("USER: ")        
 
             try:
                 gen = self.main_thread.get_completion(message=text, recipient_agent=recipient_agent)

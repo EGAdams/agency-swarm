@@ -27,39 +27,23 @@ class Agent():
     def functions(self):
         return [tool for tool in self.tools if issubclass(tool, BaseTool)]
 
-    def __init__(
-            self,
-            id: str = None,
-            name: str = None,
-            description: str = None,
-            instructions: str = "",
-            tools: List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]] = None,
-            tools_folder: str = None,
-            files_folder: Union[List[str], str] = None,
-            schemas_folder: Union[List[str], str] = None,
-            api_headers: Dict[str, Dict[str, str]] = None,
-            api_params: Dict[str, Dict[str, str]] = None,
-            file_ids: List[str] = None,
-            metadata: Dict[str, str] = None,
-            model: str = "gpt-3.5-turbo-0125"
-    ):
+    def __init__(self, id: str = None, name: str = None, description: str = None, instructions: str = "",
+                 tools: List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]] = None,
+                 files_folder: Union[List[str], str] = None,
+                 file_ids: List[str] = None, metadata: Dict[str, str] = None, model: str = "gpt-3.5-turbo-1106"):
         """
         Initializes an Agent with specified attributes, tools, and OpenAI client.
 
         Parameters:
-            id (str, optional): Loads the assistant from OpenAI assistant ID. Assistant will be created or loaded from settings if ID is not provided. Defaults to None.
-            name (str, optional): Name of the agent. Defaults to the class name if not provided.
-            description (str, optional): A brief description of the agent's purpose. Defaults to None.
-            instructions (str, optional): Path to a file containing specific instructions for the agent. Defaults to an empty string.
-            tools (List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]], optional): A list of tools (as classes) that the agent can use. Defaults to an empty list.
-            tools_folder (str, optional): Path to a directory containing tools associated with the agent. Each tool must be defined in a separate file. File must be named as the class name of the tool. Defaults to None.
-            files_folder (Union[List[str], str], optional): Path or list of paths to directories containing files associated with the agent. Defaults to None.
-            schemas_folder (Union[List[str], str], optional): Path or list of paths to directories containing OpenAPI schemas associated with the agent. Defaults to None.
-            api_headers (Dict[str,Dict[str, str]], optional): Headers to be used for the openapi requests. Each key must be a full filename from schemas_folder. Defaults to an empty dictionary.
-            api_params (Dict[str, Dict[str, str]], optional): Extra params to be used for the openapi requests. Each key must be a full filename from schemas_folder. Defaults to an empty dictionary.
-            file_ids (List[str], optional): List of file IDs for files associated with the agent. Defaults to an empty list.
-            metadata (Dict[str, str], optional): Metadata associated with the agent. Defaults to an empty dictionary.
-            model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-3.5-turbo-0125".
+        id (str, optional): Unique identifier for the agent. Defaults to None.
+        name (str, optional): Name of the agent. Defaults to the class name if not provided.
+        description (str, optional): A brief description of the agent's purpose. Defaults to None.
+        instructions (str, optional): Path to a file containing specific instructions for the agent. Defaults to an empty string.
+        tools (List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]], optional): A list of tools (as classes) that the agent can use. Defaults to an empty list.
+        files_folder (Union[List[str], str], optional): Path or list of paths to directories containing files associated with the agent. Defaults to None.
+        file_ids (List[str], optional): List of file IDs for files associated with the agent. Defaults to an empty list.
+        metadata (Dict[str, str], optional): Metadata associated with the agent. Defaults to an empty dictionary.
+        model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-3.5-turbo-1106".
 
         This constructor sets up the agent with its unique properties, initializes the OpenAI client, reads instructions if provided, and uploads any associated files.
         """

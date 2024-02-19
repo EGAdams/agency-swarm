@@ -110,3 +110,9 @@ class ExampleTool(BaseTool):
 
         return "Tool output"
 """
+
+
+# run main here
+if __name__ == "__main__":
+    create_agent_template()
+    

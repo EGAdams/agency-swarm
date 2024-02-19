@@ -1,13 +1,13 @@
 [
     {
-        "id": "asst_mOqXA2KQ8Dc2NpkFvedg52hT",
-        "created_at": 1708242946,
-        "description": "The QA Manager Agent is an advanced digital entity designed to oversee and enhance the quality of processes for our SaaS product.",
+        "id": "asst_E3Okx7n2AVa5dlbM2lWYI7qj",
+        "created_at": 1701284342,
+        "description": "Responsible for client communication, task planning and management.",
         "file_ids": [],
-        "instructions": "As a Quality Assurance (QA) Manager, your role involves direct interaction and oversight of the BrowsingAgent's operations. Your primary duty is to guarantee that the user's task is comprehensively and accurately completed. Achieve this by methodically issuing each step of the task as a distinct message to the BrowsingAgent. It's crucial to confirm the successful execution of one step before advancing to the next. This procedure forms part of an integration test, which will be conducted in a live production environment. Importantly, ensure to provide the BrowsingAgent with the actual credentials related to the task, enabling authentic testing scenarios.",
+        "instructions": "# \"AI\" Agency Manifesto\n\nYou are a part of a virtual AI development agency called \"Agency Swarm\".\n\nYour mission is to keep track of what is done in each project and what needs to be done yet in each project.\n\n# Instructions for CEO Agent\n\n- Ensure that proposal is send to the user before proceeding with task execution.\n- Delegate tasks to appropriate agents, ensuring they align with their expertise and capabilities.\n- Clearly define the objectives and expected outcomes for each task.\n- Provide necessary context and background information for successful task completion.\n- Maintain ongoing communication with agents until complete task execution.\n- Review completed tasks to ensure they meet the set objectives.\n- Report the results back to the user.",
         "metadata": {},
-        "model": "gpt-3.5-turbo-0125",
-        "name": "QA Manager",
+        "model": "gpt-3.5-turbo-1106",
+        "name": "CEO",
         "object": "assistant",
         "tools": [
             {
@@ -40,27 +40,158 @@
                                 "title": "Message",
                                 "type": "string"
                             },
-                            "message_files": {
-                                "default": null,
-                                "description": "A list of file ids to be sent as attachments to this message. Only use this if you have the file id that starts with 'file-'.",
-                                "examples": [
-                                    "file-1234",
-                                    "file-5678"
-                                ],
-                                "items": {
-                                    "type": "string"
-                                },
-                                "title": "Message Files",
-                                "type": "array"
+                            "caller_agent_name": {
+                                "default": "CEO",
+                                "description": "The agent calling this tool. Defaults to your name. Do not change it.",
+                                "title": "Caller Agent Name",
+                                "type": "string"
                             }
                         },
                         "required": [
-                            "instructions",
+                            "chain_of_thought",
                             "message",
                             "recipient"
                         ],
                         "type": "object"
-                    }
+                    },
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as they do not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved."
+                },
+                "type": "function"
+            }
+        ]
+    },
+    {
+        "id": "asst_mmODSJ4kNsyCW6kmcdEFgY1b",
+        "created_at": 1701284343,
+        "description": "Responsible for running and executing Python Programs.",
+        "file_ids": [],
+        "instructions": "# \"AI\" Agency Manifesto\n\nYou are a part of a virtual AI development agency called \"Agency Swarm\".\n\nYour mission is to keep track of what is done in each project and what needs to be done yet in each project.\n\n# Instructions for AI Developer Agent\n\n- Write clean and efficient Python code.\n- Structure your code logically, with `main.py` as the entry point.\n- Ensure correct imports according to program structure.\n- Execute your code to test for functionality and errors, before reporting back to the user.\n- Anticipate and handle potential runtime errors.\n- Provide clear error messages for easier troubleshooting.\n- Debug any issues before reporting the results back to the user.",
+        "metadata": {},
+        "model": "gpt-3.5-turbo-1106",
+        "name": "Developer",
+        "object": "assistant",
+        "tools": [
+            {
+                "function": {
+                    "name": "ExecuteCommand",
+                    "parameters": {
+                        "properties": {
+                            "command": {
+                                "description": "The command to be executed.",
+                                "title": "Command",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "command"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Run any command from the terminal. If there are too many logs, the outputs might be truncated."
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "Program",
+                    "parameters": {
+                        "$defs": {
+                            "File": {
+                                "description": "File to be written to the disk with an appropriate name and file path, containing code that can be saved and executed locally at a later time.",
+                                "properties": {
+                                    "file_name": {
+                                        "description": "The name of the file including the extension and the file path from your current directory if needed.",
+                                        "title": "File Name",
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "description": "Correct contents of a file",
+                                        "title": "Body",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file_name",
+                                    "body"
+                                ],
+                                "title": "File",
+                                "type": "object"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct actions that are needed to implement the program.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "files": {
+                                "description": "List of files",
+                                "items": {
+                                    "$ref": "#/$defs/File"
+                                },
+                                "title": "Files",
+                                "type": "array"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "files"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Set of files that represent a complete and correct program. This environment has access to all standard Python packages and the internet."
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "SendMessage",
+                    "parameters": {
+                        "$defs": {
+                            "recipient": {
+                                "enum": [
+                                    "Virtual Assistant",
+                                    "CppDeveloper",
+                                    "Project Tracker"
+                                ],
+                                "title": "recipient",
+                                "type": "string"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct recipient and message.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "recipient": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/recipient"
+                                    }
+                                ],
+                                "description": "Virtual Assistant: Responsible for drafting emails, doing research and writing proposals.\nCppDeveloper: Responsible for designing C++ objects.\nProject Tracker: Responsible for tracking project progress and task management.\n"
+                            },
+                            "message": {
+                                "description": "Specify the task required for the recipient agent to complete. Focus on clarifying what the task entails, rather than providing exact instructions.",
+                                "title": "Message",
+                                "type": "string"
+                            },
+                            "caller_agent_name": {
+                                "default": "Developer",
+                                "description": "The agent calling this tool. Defaults to your name. Do not change it.",
+                                "title": "Caller Agent Name",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "message",
+                            "recipient"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as they do not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved."
                 },
                 "type": "function"
             }
@@ -79,178 +210,581 @@
         "tools": [
             {
                 "function": {
-                    "name": "Scroll",
-                    "description": "This tool allows you to scroll the current web page up or down by 1 screen height.",
+                    "name": "SearchWeb",
                     "parameters": {
                         "properties": {
-                            "direction": {
-                                "description": "Direction to scroll.",
+                            "phrase": {
+                                "description": "The search phrase you want to use. Optimize the search phrase for an internet search engine.",
+                                "title": "Phrase",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "phrase"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Search the web with a search phrase and return the results."
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "FindEmail",
+                    "parameters": {
+                        "properties": {
+                            "instructions": {
+                                "description": "The search phrase you want to use to find a relevant email.",
+                                "title": "Instructions",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "instructions"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Use this tool to find an email in user's mailbox"
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "DraftEmail",
+                    "parameters": {
+                        "properties": {
+                            "instructions": {
+                                "description": "Clearly outline in natural language the content of the email you need to draft and the address of the recepient.",
+                                "title": "Instructions",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "instructions"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Use this tool to draft a response email"
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "GenerateProposal",
+                    "parameters": {
+                        "properties": {
+                            "project_brief": {
+                                "description": "The project breif to generate a proposal for.",
+                                "title": "Project Brief",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "project_brief"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Generate a proposal for a project based on a project brief. Remember that user does not have access to the output of this function. You must send it back to him after execution."
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "SendMessage",
+                    "parameters": {
+                        "$defs": {
+                            "recipient": {
                                 "enum": [
-                                    "up",
-                                    "down"
+                                    "CppDeveloper",
+                                    "Project Tracker"
                                 ],
-                                "title": "Direction",
+                                "title": "recipient",
                                 "type": "string"
                             }
                         },
-                        "required": [
-                            "direction"
-                        ],
-                        "type": "object"
-                    }
-                },
-                "type": "function"
-            },
-            {
-                "function": {
-                    "name": "SendKeys",
-                    "description": "This tool sends keys into input fields on the current webpage based on the description of that element and what needs to be typed. It then clicks \"Enter\" on the last element to submit the form. You do not need to tell it to press \"Enter\"; it will do that automatically.",
-                    "parameters": {
                         "properties": {
-                            "description": {
-                                "description": "Description of the inputs to send to the web page, clearly stated in natural language.",
-                                "examples": [
-                                    "Type 'hello' into the 'Search' input field.",
-                                    "Type johndoe@gmail.com into the 'Email' input field, and type 'password123' into the 'Password' input field.",
-                                    "Select the second option in the 'Country' dropdown."
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct recipient and message.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "recipient": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/recipient"
+                                    }
                                 ],
-                                "title": "Description",
+                                "description": "CppDeveloper: Responsible for designing C++ objects.\nProject Tracker: Responsible for tracking project progress and task management.\n"
+                            },
+                            "message": {
+                                "description": "Specify the task required for the recipient agent to complete. Focus on clarifying what the task entails, rather than providing exact instructions.",
+                                "title": "Message",
+                                "type": "string"
+                            },
+                            "caller_agent_name": {
+                                "default": "Virtual Assistant",
+                                "description": "The agent calling this tool. Defaults to your name. Do not change it.",
+                                "title": "Caller Agent Name",
                                 "type": "string"
                             }
                         },
                         "required": [
-                            "description"
+                            "chain_of_thought",
+                            "message",
+                            "recipient"
                         ],
                         "type": "object"
-                    }
+                    },
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as they do not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved."
+                },
+                "type": "function"
+            }
+        ]
+    },
+    {
+        "id": "asst_GuHVozfpk0AweOJmdIKTnnrp",
+        "created_at": 1701798092,
+        "description": "Responsible for developing iOS solutions in Swift.",
+        "file_ids": [],
+        "instructions": "\n# \"Contruciton AI\" Agency Manifesto \n- You are a part of a virtual AI development agency called \"My Developer Guy AI\"\n- Your mission is to write quality code for the customer.\n\n\n# Persona\n- World-class iOS developer\n- Has a strong understanding of the iOS ecosystem\n- Has a strong understanding of the Swift programming language\n- Expert UI/UX and storyboard skills\n- World-class Object-Oriented Programming and Gang of Four Design Patterns skills\n\n# Your Goal\n- Design an iOS development solution for this agency.\n- Write clean and efficient Swift code.\n- Separate the UI Storyboard from the Swift code keeping in mind that the user is going to build the UI using a UIKit Storyboard.\n- Use your skills in iOS development to organize the final code solution into a logical file structure and place the files into their respective folders.\n",
+        "metadata": {},
+        "model": "gpt-3.5-turbo-1106",
+        "name": "iOS_Developer",
+        "object": "assistant",
+        "tools": [
+            {
+                "function": {
+                    "name": "ExecuteCommand",
+                    "parameters": {
+                        "properties": {
+                            "command": {
+                                "description": "The command to be executed.",
+                                "title": "Command",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "command"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Run any command from the terminal. If there are too many logs, the outputs might be truncated."
                 },
                 "type": "function"
             },
             {
                 "function": {
-                    "name": "ClickElement",
-                    "description": "This tool clicks on an element on the current web page based on element or task description. Do not use this tool for input fields or dropdowns.",
+                    "name": "Program",
                     "parameters": {
-                        "properties": {
-                            "description": {
-                                "description": "Description of the element to click on in natural language.",
-                                "example": "Click on the 'Sign Up' button.",
-                                "title": "Description",
-                                "type": "string"
-                            }
-                        },
-                        "required": [
-                            "description"
-                        ],
-                        "type": "object"
-                    }
-                },
-                "type": "function"
-            },
-            {
-                "function": {
-                    "name": "ReadURL",
-                    "description": "This tool reads a single URL and opens it in your current browser window. For each new source, go to a direct URL\nthat you think might contain the answer to the user's question or perform a google search like\n'https://google.com/search?q=search' if applicable. Otherwise, don't try to guess the direct url, use ClickElement tool\nto click on the link that you think might contain the desired information on the current web page.\nRemember, this tool only supports opening 1 URL at a time. Previous URL will be closed when you open a new one.\n    ",
-                    "parameters": {
-                        "properties": {
-                            "url": {
-                                "description": "URL of the webpage.",
-                                "examples": [
-                                    "https://google.com/search?q=search"
+                        "$defs": {
+                            "File": {
+                                "description": "File to be written to the disk with an appropriate name and file path, containing code that can be saved and executed locally at a later time.",
+                                "properties": {
+                                    "file_name": {
+                                        "description": "The name of the file including the extension and the file path from your current directory if needed.",
+                                        "title": "File Name",
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "description": "Correct contents of a file",
+                                        "title": "Body",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file_name",
+                                    "body"
                                 ],
-                                "title": "Url",
+                                "title": "File",
+                                "type": "object"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct actions that are needed to implement the program.",
+                                "title": "Chain Of Thought",
                                 "type": "string"
+                            },
+                            "files": {
+                                "description": "List of files",
+                                "items": {
+                                    "$ref": "#/$defs/File"
+                                },
+                                "title": "Files",
+                                "type": "array"
                             }
                         },
                         "required": [
-                            "url"
+                            "chain_of_thought",
+                            "files"
                         ],
                         "type": "object"
-                    }
+                    },
+                    "description": "Set of files that represent a complete and correct program. This environment has access to all standard Python packages and the internet."
                 },
                 "type": "function"
             },
             {
                 "function": {
-                    "name": "AnalyzeContent",
-                    "description": "This tool analyzes the current web browser window content and allows you to ask a question about its contents. Make sure to read\nthe URL first with ReadURL tool or navigate to the right page with ClickElement tool. Do not use this tool to get \ndirect links to other pages. It is not intended to be used for navigation. To analyze the full web page, instead of just the current window, use ExportFile tool.",
+                    "name": "SendMessage",
+                    "parameters": {
+                        "$defs": {
+                            "recipient": {
+                                "const": "Virtual Assistant",
+                                "title": "recipient"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct recipient and message.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "recipient": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/recipient"
+                                    }
+                                ],
+                                "description": "Virtual Assistant: Responsible for drafting emails, doing research and writing proposals.\n"
+                            },
+                            "message": {
+                                "description": "Specify the task required for the recipient agent to complete. Focus on clarifying what the task entails, rather than providing exact instructions.",
+                                "title": "Message",
+                                "type": "string"
+                            },
+                            "caller_agent_name": {
+                                "default": "iOS_Developer",
+                                "description": "The agent calling this tool. Defaults to your name. Do not change it.",
+                                "title": "Caller Agent Name",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "message",
+                            "recipient"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as they do not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved."
+                },
+                "type": "function"
+            }
+        ]
+    },
+    {
+        "id": "asst_c8OMyJPgInzzfTelfMhM1Goz",
+        "created_at": 1702164331,
+        "description": "Responsible for developing iOS solutions in Swift.",
+        "file_ids": [],
+        "instructions": "\n# \"Contruciton AI\" Agency Manifesto \n- You are a part of a virtual AI development agency called \"My Developer Guy AI\"\n- Your mission is to write quality code for the customer.\n\n\n# Persona\n- World-class iOS developer\n- Has a strong understanding of the iOS ecosystem\n- Has a strong understanding of the Swift programming language\n- Expert UI/UX and storyboard skills\n- World-class Object-Oriented Programming and Gang of Four Design Patterns skills\n\n# Your Goal\n- Design an iOS development solution for this agency.\n- Write clean and efficient Swift code.\n- Separate the UI Storyboard from the Swift code keeping in mind that the user is going to build the UI using a UIKit Storyboard.\n- Use your skills in iOS development to organize the final code solution into a logical file structure and place the files into their respective folders.\n",
+        "metadata": {},
+        "model": "gpt-3.5-turbo-1106",
+        "name": "iOSDeveloper",
+        "object": "assistant",
+        "tools": [
+            {
+                "function": {
+                    "name": "ExecuteCommand",
                     "parameters": {
                         "properties": {
-                            "question": {
-                                "description": "Question to ask about the contents of the current webpage.",
-                                "title": "Question",
+                            "command": {
+                                "description": "The command to be executed.",
+                                "title": "Command",
                                 "type": "string"
                             }
                         },
                         "required": [
-                            "question"
+                            "command"
                         ],
                         "type": "object"
-                    }
+                    },
+                    "description": "Run any command from the terminal. If there are too many logs, the outputs might be truncated."
                 },
                 "type": "function"
             },
             {
                 "function": {
-                    "name": "GoBack",
-                    "description": "This tool allows you to go back 1 page in the browser history. Use it in case of a mistake or if a page shows you unexpected content.",
+                    "name": "Program",
+                    "parameters": {
+                        "$defs": {
+                            "File": {
+                                "description": "File to be written to the disk with an appropriate name and file path, containing code that can be saved and executed locally at a later time.",
+                                "properties": {
+                                    "file_name": {
+                                        "description": "The name of the file including the extension and the file path from your current directory if needed.",
+                                        "title": "File Name",
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "description": "Correct contents of a file",
+                                        "title": "Body",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file_name",
+                                    "body"
+                                ],
+                                "title": "File",
+                                "type": "object"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct actions that are needed to implement the program.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "files": {
+                                "description": "List of files",
+                                "items": {
+                                    "$ref": "#/$defs/File"
+                                },
+                                "title": "Files",
+                                "type": "array"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "files"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Set of files that represent a complete and correct program. This environment has access to all standard Python packages and the internet."
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "SendMessage",
+                    "parameters": {
+                        "$defs": {
+                            "recipient": {
+                                "const": "Virtual Assistant",
+                                "title": "recipient"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct recipient and message.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "recipient": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/recipient"
+                                    }
+                                ],
+                                "description": "Virtual Assistant: Responsible for drafting emails, doing research and writing proposals.\n"
+                            },
+                            "message": {
+                                "description": "Specify the task required for the recipient agent to complete. Focus on clarifying what the task entails, rather than providing exact instructions.",
+                                "title": "Message",
+                                "type": "string"
+                            },
+                            "caller_agent_name": {
+                                "default": "iOSDeveloper",
+                                "description": "The agent calling this tool. Defaults to your name. Do not change it.",
+                                "title": "Caller Agent Name",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "message",
+                            "recipient"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as they do not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved."
+                },
+                "type": "function"
+            }
+        ]
+    },
+    {
+        "id": "asst_5E0nVXAhznqK87cP3jiR75K2",
+        "created_at": 1702771004,
+        "description": "Responsible for tracking project progress and task management.",
+        "file_ids": [],
+        "instructions": "# \"AI\" Agency Manifesto\n\nYou are a part of a virtual AI development agency called \"Agency Swarm\".\n\nYour mission is to keep track of what is done in each project and what needs to be done yet in each project.\n\n# Instructions for Project Tracker Agent\n- Track and update the status of various tasks as per the project plans.\n- Provide regular updates on project progress.\n- Work in coordination with other agents for smooth project execution.",
+        "metadata": {},
+        "model": "gpt-3.5-turbo-1106",
+        "name": "Project Tracker",
+        "object": "assistant",
+        "tools": [
+            {
+                "function": {
+                    "name": "UpdateTaskStatus",
+                    "parameters": {
+                        "properties": {
+                            "task_id": {
+                                "description": "The unique identifier of the task to be updated.",
+                                "title": "Task Id",
+                                "type": "string"
+                            },
+                            "new_status": {
+                                "description": "The new status of the task.",
+                                "title": "New Status",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "new_status",
+                            "task_id"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Correctly extracted `UpdateTaskStatus` with all the required parameters with correct types"
+                },
+                "type": "function"
+            },
+            {
+                "function": {
+                    "name": "GetProjectStatus",
                     "parameters": {
                         "properties": {},
                         "type": "object",
                         "required": []
-                    }
+                    },
+                    "description": "Tool for retrieving the current status of all tasks in the project management system."
                 },
                 "type": "function"
-            },
+            }
+        ]
+    },
+    {
+        "id": "asst_mOKB1ceTspWn9RXzKjfi1Vxk",
+        "created_at": 1703276028,
+        "description": "Responsible for designing C++ objects.",
+        "file_ids": [],
+        "instructions": "# \"AI\" Agency Manifesto\n\nYou are a part of a virtual AI development agency called \"Agency Swarm\".\n\nYour mission is to keep track of what is done in each project and what needs to be done yet in each project.\n\n# Persona\n- World-class C++ developer\n- Has an intamate understanding of Object-Oriented Programming\n- Seasoned user of the Gang of Four Design Patterns\n\n# File Tree Structure for projects\n```\n{project-name}\n|-- {object-name}\n|   |-- {object-name}.h\n|   |-- {object-name}.cpp\n|-- Makefile\n|-- documentation\n    |-- mermaid_sequence.md\n    |-- mermaid_class.md\n    |-- mermaid_state.md\n    |-- object_description.html\n```\n\n# Your Goals\n- You are resonsible for designing one of the C++ objects in the system that we are building.\n- Analyze the  C++ header files that have already been written and the Mermaid diagrams to determine how the object you are responsible for fits into the system.\n- Make sure to write clean and efficient C++ code that adheres to the SOLID principles of Object-Oriented Programming.\n- Use the file structure provided and place the files into their respective folders.\n\n",
+        "metadata": {},
+        "model": "gpt-3.5-turbo-1106",
+        "name": "CppDeveloper",
+        "object": "assistant",
+        "tools": [
             {
                 "function": {
-                    "name": "SelectDropdown",
-                    "description": "This tool selects an option in a dropdown on the current web page based on the description of that element and which option to select.",
+                    "name": "ExecuteCommand",
                     "parameters": {
                         "properties": {
-                            "description": {
-                                "description": "Description of which option to select and for which dropdown on the page, clearly stated in natural langauge.",
-                                "examples": [
-                                    "Select Germany option in the 'Country' dropdown."
-                                ],
-                                "title": "Description",
+                            "command": {
+                                "description": "The command to be executed.",
+                                "title": "Command",
                                 "type": "string"
                             }
                         },
                         "required": [
-                            "description"
+                            "command"
                         ],
                         "type": "object"
-                    }
+                    },
+                    "description": "Run any command from the terminal. If there are too many logs, the outputs might be truncated."
                 },
                 "type": "function"
             },
             {
                 "function": {
-                    "name": "SolveCaptcha",
-                    "description": "This tool asks a human to solve captcha on the current webpage. Make sure that captcha is visible before running it.",
+                    "name": "Program",
                     "parameters": {
-                        "properties": {},
-                        "type": "object",
-                        "required": []
-                    }
+                        "$defs": {
+                            "File": {
+                                "description": "File to be written to the disk with an appropriate name and file path, containing code that can be saved and executed locally at a later time.",
+                                "properties": {
+                                    "file_name": {
+                                        "description": "The name of the file including the extension and the file path from your current directory if needed.",
+                                        "title": "File Name",
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "description": "Correct contents of a file",
+                                        "title": "Body",
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "file_name",
+                                    "body"
+                                ],
+                                "title": "File",
+                                "type": "object"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct actions that are needed to implement the program.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "files": {
+                                "description": "List of files",
+                                "items": {
+                                    "$ref": "#/$defs/File"
+                                },
+                                "title": "Files",
+                                "type": "array"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "files"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Set of files that represent a complete and correct program. This environment has access to all standard Python packages and the internet."
                 },
                 "type": "function"
             },
             {
                 "function": {
-                    "name": "ExportFile",
-                    "description": "This tool converts the current full web page into a file and returns its file_id. You can then analyze this file using the myfiles_browser tool.",
+                    "name": "SendMessage",
                     "parameters": {
-                        "properties": {},
-                        "type": "object",
-                        "required": []
-                    }
+                        "$defs": {
+                            "recipient": {
+                                "const": "Project Tracker",
+                                "title": "recipient"
+                            }
+                        },
+                        "properties": {
+                            "chain_of_thought": {
+                                "description": "Think step by step to determine the correct recipient and message.",
+                                "title": "Chain Of Thought",
+                                "type": "string"
+                            },
+                            "recipient": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/recipient"
+                                    }
+                                ],
+                                "description": "Project Tracker: Responsible for tracking project progress and task management.\n"
+                            },
+                            "message": {
+                                "description": "Specify the task required for the recipient agent to complete. Focus on clarifying what the task entails, rather than providing exact instructions.",
+                                "title": "Message",
+                                "type": "string"
+                            },
+                            "caller_agent_name": {
+                                "default": "CppDeveloper",
+                                "description": "The agent calling this tool. Defaults to your name. Do not change it.",
+                                "title": "Caller Agent Name",
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "chain_of_thought",
+                            "message",
+                            "recipient"
+                        ],
+                        "type": "object"
+                    },
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as they do not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved."
                 },
                 "type": "function"
-            },
-            {
-                "type": "retrieval"
             }
         ]
     }

@@ -1,0 +1,18 @@
+sequenceDiagram
+  participant ScoreboardController
+  participant TennisGame
+  participant Player1
+  participant Player2
+  ScoreboardController->>TennisGame: startGame()
+  activate TennisGame
+  TennisGame->>ScoreboardController: gameStarted()
+  ScoreboardController->>Player1: updateScore()
+  activate Player1
+  Player1->>ScoreboardController: scoreUpdated()
+  deactivate Player1
+  ScoreboardController->>Player2: updateScore()
+  activate Player2
+  Player2->>ScoreboardController: scoreUpdated()
+  deactivate Player2
+  ScoreboardController-->TennisGame: endGame()
+  deactivate TennisGame
