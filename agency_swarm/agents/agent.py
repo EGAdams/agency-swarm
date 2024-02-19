@@ -41,7 +41,7 @@ class Agent():
             api_params: Dict[str, Dict[str, str]] = None,
             file_ids: List[str] = None,
             metadata: Dict[str, str] = None,
-            model: str = "gpt-4-turbo-preview"
+            model: str = "gpt-3.5-turbo-0125"
     ):
         """
         Initializes an Agent with specified attributes, tools, and OpenAI client.
@@ -59,7 +59,7 @@ class Agent():
             api_params (Dict[str, Dict[str, str]], optional): Extra params to be used for the openapi requests. Each key must be a full filename from schemas_folder. Defaults to an empty dictionary.
             file_ids (List[str], optional): List of file IDs for files associated with the agent. Defaults to an empty list.
             metadata (Dict[str, str], optional): Metadata associated with the agent. Defaults to an empty dictionary.
-            model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-4-turbo-preview".
+            model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-3.5-turbo-0125".
 
         This constructor sets up the agent with its unique properties, initializes the OpenAI client, reads instructions if provided, and uploads any associated files.
         """
@@ -138,7 +138,7 @@ class Agent():
                         self.id = assistant_settings['id']
                         # update assistant if parameters are different
                         if not self._check_parameters(self.assistant.model_dump()):
-                            print("Updating assistant... " + self.name)
+                            print("Updating agent... " + self.name)
                             self._update_assistant()
                         self._update_settings()
                         return self

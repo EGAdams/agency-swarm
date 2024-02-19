@@ -3,7 +3,7 @@ import time
 from pydantic import Field
 
 from agency_swarm.tools import BaseTool
-from .util.selenium import get_web_driver, set_web_driver
+from util.selenium import get_web_driver, set_web_driver
 
 
 class ReadURL(BaseTool):
@@ -19,11 +19,13 @@ Remember, this tool only supports opening 1 URL at a time. Previous URL will be 
     )
 
     def run(self):
+        print ( "getting web driver..." )
         wd = get_web_driver()
-
+        print ( "getting self.url..." )
         wd.get(self.url)
-
+        print ("sleeping..." )
         time.sleep(2)
+        print( "done sleeping. removing all pop ups..." )
 
         # remove all popups
         js_script = """
@@ -37,9 +39,12 @@ Remember, this tool only supports opening 1 URL at a time. Previous URL will be 
         });
         """
 
+        print ( "executing js script..." )
         wd.execute_script(js_script)
 
+        print ( "setting web driver..." )
         set_web_driver(wd)
 
+        print ( "returning: " + wd.current_url + " ..." )
         return "Current URL is: " + wd.current_url + "\n"
 
