@@ -73,7 +73,7 @@
         "file_ids": [],
         "instructions": "You are an advanced browsing agent equipped with specialized tools to navigate and search the web effectively. Your primary objective is to fulfill the user's requests by efficiently utilizing these tools. When encountering uncertainty about the location of specific information on a website, employ the 'AnalyzeContent' tool. Remember, you can only open and interact with 1 web page at a time. Do not try to read or click on multiple links. Finish allaying your current web page first, before proceeding to a different source. Don't try to guess the direct url, always perform a google search if applicable, or return to your previous search results. In case if you need to analyze the full web page, use the 'ExportFile' tool to add it to myfiles_browser for further analysis.",
         "metadata": {},
-        "model": "gpt-3.5-turbo-0125",
+        "model": "gpt-4-turbo-preview",
         "name": "BrowsingAgent",
         "object": "assistant",
         "tools": [
@@ -251,6 +251,78 @@
             },
             {
                 "type": "retrieval"
+            }
+        ]
+    },
+    {
+        "id": "asst_Zw3KYZUBFI9jZheRiVLkQAta",
+        "created_at": 1708347802,
+        "description": "Expert Python Menu System Developer",
+        "file_ids": [
+            "file-mxu3o7dmpFahGMvpptfsToj6"
+        ],
+        "instructions": "\n                    Act as a world-class Python Developer\n\n                    You are participating in a group chat with a user (User_proxy).\n\n                    Please become intimately familiar with the attached all_smart_code.py file because you will need that knowledge to use in the group chat.\n\n                    ",
+        "metadata": {},
+        "model": "gpt-4-turbo-preview",
+        "name": "MemGPT_Coder",
+        "object": "assistant",
+        "tools": [
+            {
+                "type": "retrieval"
+            },
+            {
+                "function": {
+                    "name": "SendMessage",
+                    "description": "Use this tool to facilitate direct, synchronous communication between specialized agents within your agency. When you send a message using this tool, you receive a response exclusively from the designated recipient agent. To continue the dialogue, invoke this tool again with the desired recipient agent and your follow-up message. Remember, communication here is synchronous; the recipient agent won't perform any tasks post-response. You are responsible for relaying the recipient agent's responses back to the user, as the user does not have direct access to these replies. Keep engaging with the tool for continuous interaction until the task is fully resolved.",
+                    "parameters": {
+                        "$defs": {
+                            "recipient": {
+                                "const": "BrowsingAgent",
+                                "title": "recipient"
+                            }
+                        },
+                        "properties": {
+                            "instructions": {
+                                "description": "Please repeat your instructions step-by-step, including both completed and the following next steps that you need to perfrom. For multi-step, complex tasks, first break them down into smaller steps yourself. Then, issue each step individually to the recipient agent via the message parameter. Each identified step should be sent in separate message. Keep in mind, that the recipient agent does not have access to these instructions. You must include recipient agent-specific instructions in the message parameter.",
+                                "title": "Instructions",
+                                "type": "string"
+                            },
+                            "recipient": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/recipient"
+                                    }
+                                ],
+                                "description": "BrowsingAgent: This agent is equipped with specialized tools to navigate and search the web effectively.\n"
+                            },
+                            "message": {
+                                "description": "Specify the task required for the recipient agent to complete. Focus on clarifying what the task entails, rather than providing exact instructions.",
+                                "title": "Message",
+                                "type": "string"
+                            },
+                            "message_files": {
+                                "default": null,
+                                "description": "A list of file ids to be sent as attachments to this message. Only use this if you have the file id that starts with 'file-'.",
+                                "examples": [
+                                    "file-1234",
+                                    "file-5678"
+                                ],
+                                "items": {
+                                    "type": "string"
+                                },
+                                "title": "Message Files",
+                                "type": "array"
+                            }
+                        },
+                        "required": [
+                            "instructions",
+                            "message",
+                            "recipient"
+                        ],
+                        "type": "object"
+                    }
+                },
+                "type": "function"
             }
         ]
     }
