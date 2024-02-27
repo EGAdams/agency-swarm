@@ -1,0 +1,37 @@
+{
+    "function": {
+        "name": "RunCommand",
+        "description": "Enables you to execute certain terminal commands.",
+        "parameters": {
+            "properties": {
+                "command": {
+                    "description": "The terminal command to execute. Create a new Next.js app with `create-next-app`, build the current app with `build`, or install dependencies with `install`.",
+                    "enum": [
+                        "build",
+                        "create-next-app",
+                        "install"
+                    ],
+                    "title": "Command",
+                    "type": "string"
+                },
+                "options": {
+                    "default": "",
+                    "description": "Additional options to pass to the command. For example, you can pass package names to install with `npm install`.",
+                    "examples": [
+                        "--save",
+                        "--save-dev",
+                        "mui --save",
+                        "my-next-app"
+                    ],
+                    "title": "Options",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "command"
+            ],
+            "type": "object"
+        }
+    },
+    "type": "function"
+}

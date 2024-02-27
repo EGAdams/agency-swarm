@@ -16,8 +16,7 @@ from agency_swarm import Agency, Agent
 
 browsing_agent = BrowsingAgent()
 
-web_developer = WebDeveloper()
-
+web_developer = webdevloper()
 
 memgpt_coder = Agent( name="MemGPT_Coder",
                     description="Expert Python Menu System Developer",
@@ -37,9 +36,8 @@ memgpt_coder = Agent( name="MemGPT_Coder",
 agency = Agency([ memgpt_coder, web_developer,
                  [ memgpt_coder, web_developer]])
 
-agency.run_demo()
-# demo = agency.demo_gradio(height=400) # reload the notebook each time you run this cell
 
+demo = agency.demo_gradio(height=400) # reload the notebook each time you run this cell
 
 
 # Here are the instructions for this quality assurance testing task:
@@ -55,7 +53,7 @@ agency.run_demo()
 # If there are any issues along the way, please try to troubleshoot them yourself with the browsing agent first, before reporting back to me.
 
 input( "enter to continue" )
-# demo.close()
+demo.close()
 
 exit()
 # # Creating Your Own Browsing Swarm
