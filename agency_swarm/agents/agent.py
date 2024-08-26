@@ -1,21 +1,36 @@
+import copy
 import inspect
 import json
 import os
-from typing import Dict, Union, Any, Type
+from typing import Dict, Union, Any, Type, Literal, TypedDict, Optional
 from typing import List
 
 from deepdiff import DeepDiff
+from openai import NotFoundError
+from openai.types.beta.assistant import ToolResources
 
-from agency_swarm.tools import BaseTool, ToolFactory
-from agency_swarm.tools import Retrieval, CodeInterpreter
+from agency_swarm.tools import BaseTool, ToolFactory, Retrieval
+from agency_swarm.tools import FileSearch, CodeInterpreter
+from agency_swarm.tools.oai.FileSearch import FileSearchConfig
 from agency_swarm.util.oai import get_openai_client
 from agency_swarm.util.openapi import validate_openapi_spec
+from agency_swarm.util.shared_state import SharedState
+from pydantic import BaseModel
+from openai.lib._parsing._completions import type_to_response_format_param
+
+class ExampleMessage(TypedDict):
+    role: Literal["user", "assistant"]
+    content: str
+    attachments: Optional[List[dict]]
+    metadata: Optional[Dict[str, str]]
 
 
 class Agent():
+    _shared_state: SharedState = None
+    
     @property
     def assistant(self):
-        if self._assistant is None:
+        if not hasattr(self, '_assistant') or self._assistant is None:
             raise Exception("Assistant is not initialized. Please run init_oai() first.")
         return self._assistant
 
@@ -26,24 +41,85 @@ class Agent():
     @property
     def functions(self):
         return [tool for tool in self.tools if issubclass(tool, BaseTool)]
+    
+    @property
+    def shared_state(self):
+        return self._shared_state
 
-    def __init__(self, id: str = None, name: str = None, description: str = None, instructions: str = "",
-                 tools: List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]] = None,
-                 files_folder: Union[List[str], str] = None,
-                 file_ids: List[str] = None, metadata: Dict[str, str] = None, model: str = "gpt-3.5-turbo-1106"):
+    @shared_state.setter
+    def shared_state(self, value):
+        self._shared_state = value
+        for tool in self.tools:
+            if issubclass(tool, BaseTool):
+                tool._shared_state = value
+
+    def response_validator(self, message: str | list) -> str:
+        """
+        Validates the response from the agent. If the response is invalid, it must raise an exception with instructions
+        for the caller agent on how to proceed.
+
+        Parameters:
+            message (str): The response from the agent.
+
+        Returns:
+            str: The validated response.
+        """
+        return message
+
+    def __init__(
+            self,
+            id: str = None,
+            name: str = None,
+            description: str = None,
+            instructions: str = "",
+            tools: List[Union[Type[BaseTool], Type[FileSearch], Type[CodeInterpreter], type[Retrieval]]] = None,
+            tool_resources: ToolResources = None,
+            temperature: float = None,
+            top_p: float = None,
+            response_format: Union[str, dict, type] = "auto",
+            tools_folder: str = None,
+            files_folder: Union[List[str], str] = None,
+            schemas_folder: Union[List[str], str] = None,
+            api_headers: Dict[str, Dict[str, str]] = None,
+            api_params: Dict[str, Dict[str, str]] = None,
+            file_ids: List[str] = None,
+            metadata: Dict[str, str] = None,
+            model: str = "gpt-4o-2024-08-06",
+            validation_attempts: int = 1,
+            max_prompt_tokens: int = None,
+            max_completion_tokens: int = None,
+            truncation_strategy: dict = None,
+            examples: List[ExampleMessage] = None,
+            file_search: FileSearchConfig = None,
+            parallel_tool_calls: bool = True,
+    ):
         """
         Initializes an Agent with specified attributes, tools, and OpenAI client.
 
         Parameters:
-        id (str, optional): Unique identifier for the agent. Defaults to None.
-        name (str, optional): Name of the agent. Defaults to the class name if not provided.
-        description (str, optional): A brief description of the agent's purpose. Defaults to None.
-        instructions (str, optional): Path to a file containing specific instructions for the agent. Defaults to an empty string.
-        tools (List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]], optional): A list of tools (as classes) that the agent can use. Defaults to an empty list.
-        files_folder (Union[List[str], str], optional): Path or list of paths to directories containing files associated with the agent. Defaults to None.
-        file_ids (List[str], optional): List of file IDs for files associated with the agent. Defaults to an empty list.
-        metadata (Dict[str, str], optional): Metadata associated with the agent. Defaults to an empty dictionary.
-        model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-3.5-turbo-1106".
+            id (str, optional): Loads the assistant from OpenAI assistant ID. Assistant will be created or loaded from settings if ID is not provided. Defaults to None.
+            name (str, optional): Name of the agent. Defaults to the class name if not provided.
+            description (str, optional): A brief description of the agent's purpose. Defaults to None.
+            instructions (str, optional): Path to a file containing specific instructions for the agent. Defaults to an empty string.
+            tools (List[Union[Type[BaseTool], Type[Retrieval], Type[CodeInterpreter]]], optional): A list of tools (as classes) that the agent can use. Defaults to an empty list.
+            tool_resources (ToolResources, optional): A set of resources that are used by the assistant's tools. The resources are specific to the type of tool. For example, the code_interpreter tool requires a list of file IDs, while the file_search tool requires a list of vector store IDs. Defaults to None.
+            temperature (float, optional): The temperature parameter for the OpenAI API. Defaults to None.
+            top_p (float, optional): The top_p parameter for the OpenAI API. Defaults to None.
+            response_format (Union[str, Dict, type], optional): The response format for the OpenAI API. If BaseModel is provided, it will be converted to a response format. Defaults to None.
+            tools_folder (str, optional): Path to a directory containing tools associated with the agent. Each tool must be defined in a separate file. File must be named as the class name of the tool. Defaults to None.
+            files_folder (Union[List[str], str], optional): Path or list of paths to directories containing files associated with the agent. Defaults to None.
+            schemas_folder (Union[List[str], str], optional): Path or list of paths to directories containing OpenAPI schemas associated with the agent. Defaults to None.
+            api_headers (Dict[str,Dict[str, str]], optional): Headers to be used for the openapi requests. Each key must be a full filename from schemas_folder. Defaults to an empty dictionary.
+            api_params (Dict[str, Dict[str, str]], optional): Extra params to be used for the openapi requests. Each key must be a full filename from schemas_folder. Defaults to an empty dictionary.
+            metadata (Dict[str, str], optional): Metadata associated with the agent. Defaults to an empty dictionary.
+            model (str, optional): The model identifier for the OpenAI API. Defaults to "gpt-4o".
+            validation_attempts (int, optional): Number of attempts to validate the response with response_validator function. Defaults to 1.
+            max_prompt_tokens (int, optional): Maximum number of tokens allowed in the prompt. Defaults to None.
+            max_completion_tokens (int, optional): Maximum number of tokens allowed in the completion. Defaults to None.
+            truncation_strategy (TruncationStrategy, optional): Truncation strategy for the OpenAI API. Defaults to None.
+            examples (List[Dict], optional): A list of example messages for the agent. Defaults to None.
+            file_search (FileSearchConfig, optional): A dictionary containing the file search tool configuration. Defaults to None.
+            parallel_tool_calls (bool, optional): Whether to enable parallel function calling during tool use. Defaults to True.
 
         This constructor sets up the agent with its unique properties, initializes the OpenAI client, reads instructions if provided, and uploads any associated files.
         """
@@ -54,14 +130,27 @@ class Agent():
         self.instructions = instructions
         self.tools = tools[:] if tools is not None else []
         self.tools = [tool for tool in self.tools if tool.__name__ != "ExampleTool"]
+        self.tool_resources = tool_resources
+        self.temperature = temperature
+        self.top_p = top_p
+        self.response_format = response_format
+        # use structured outputs if response_format is a BaseModel
+        if isinstance(self.response_format, type):
+            self.response_format = type_to_response_format_param(self.response_format)
         self.tools_folder = tools_folder
         self.files_folder = files_folder if files_folder else []
         self.schemas_folder = schemas_folder if schemas_folder else []
         self.api_headers = api_headers if api_headers else {}
         self.api_params = api_params if api_params else {}
-        self.file_ids = file_ids if file_ids else []
         self.metadata = metadata if metadata else {}
         self.model = model
+        self.validation_attempts = validation_attempts
+        self.max_prompt_tokens = max_prompt_tokens
+        self.max_completion_tokens = max_completion_tokens
+        self.truncation_strategy = truncation_strategy
+        self.examples = examples
+        self.file_search = file_search
+        self.parallel_tool_calls = parallel_tool_calls
 
         self.settings_path = './settings.json'
 
@@ -74,10 +163,10 @@ class Agent():
         self._read_instructions()
 
         # upload files
-        prev_timeout = self.client.timeout
-        self.client.timeout = 120 if prev_timeout < 120 else prev_timeout # default timeout is too low for file large file uploads
         self._upload_files()
-        self.client.timeout = prev_timeout
+        if file_ids:
+            print("Warning: 'file_ids' parameter is deprecated. Please use 'tool_resources' parameter instead.")
+            self.add_file_ids(file_ids, "file_search")
 
         self._parse_schemas()
         self._parse_tools_folder()
@@ -100,15 +189,32 @@ class Agent():
         # load assistant from id
         if self.id:
             self.assistant = self.client.beta.assistants.retrieve(self.id)
-            self.instructions = self.assistant.instructions
-            self.name = self.assistant.name
-            self.description = self.assistant.description
-            self.file_ids = self.assistant.file_ids
-            self.metadata = self.assistant.metadata
-            self.model = self.assistant.model
-            # update assistant if parameters are different
-            if not self._check_parameters(self.assistant.model_dump()):
-                self._update_assistant()
+
+            # Assign attributes to self if they are None
+            self.instructions = self.instructions or self.assistant.instructions
+            self.name = self.name if self.name != self.__class__.__name__ else self.assistant.name
+            self.description = self.description or self.assistant.description
+            self.temperature = self.assistant.temperature if self.temperature is None else self.temperature
+            self.top_p = self.top_p or self.assistant.top_p
+            self.response_format = self.response_format or self.assistant.response_format
+            if not isinstance(self.response_format, str):
+                self.response_format = self.response_format or self.response_format.model_dump()
+            else:
+                self.response_format = self.response_format or self.assistant.response_format
+            self.tool_resources = self.tool_resources or self.assistant.tool_resources.model_dump()
+            self.metadata = self.metadata or self.assistant.metadata
+            self.model = self.model or self.assistant.model
+            self.tool_resources = self.tool_resources or self.assistant.tool_resources.model_dump()
+
+            for tool in self.assistant.tools:
+                # update assistants created with v1
+                if tool.type == "retrieval":
+                    self.client.beta.assistants.update(self.id, tools=self.get_oai_tools())
+
+            # # update assistant if parameters are different
+            # if not self._check_parameters(self.assistant.model_dump()):
+            #     self._update_assistant()
+
             return self
 
         # load assistant from settings
@@ -118,25 +224,39 @@ class Agent():
                 # iterate settings and find the assistant with the same name
                 for assistant_settings in settings:
                     if assistant_settings['name'] == self.name:
-                        self.assistant = self.client.beta.assistants.retrieve(assistant_settings['id'])
-                        self.id = assistant_settings['id']
-                        # update assistant if parameters are different
-                        if not self._check_parameters(self.assistant.model_dump()):
-                            print("Updating agent... " + self.name)
-                            self._update_assistant()
-                        self._update_settings()
-                        return self
+                        try:
+                            self.assistant = self.client.beta.assistants.retrieve(assistant_settings['id'])
+                            self.id = assistant_settings['id']
+
+                            # update assistant if parameters are different
+                            if not self._check_parameters(self.assistant.model_dump()):
+                                print("Updating agent... " + self.name)
+                                self._update_assistant()
+
+                            if self.assistant.tool_resources:
+                                self.tool_resources = self.assistant.tool_resources.model_dump()
+
+                            self._update_settings()
+                            return self
+                        except NotFoundError:
+                            continue
 
         # create assistant if settings.json does not exist or assistant with the same name does not exist
         self.assistant = self.client.beta.assistants.create(
+            model=self.model,
             name=self.name,
             description=self.description,
             instructions=self.instructions,
             tools=self.get_oai_tools(),
-            file_ids=self.file_ids,
+            tool_resources=self.tool_resources,
             metadata=self.metadata,
-            model=self.model
+            temperature=self.temperature,
+            top_p=self.top_p,
+            response_format=self.response_format,
         )
+
+        if self.assistant.tool_resources:
+            self.tool_resources = self.assistant.tool_resources.model_dump()
 
         self.id = self.assistant.id
 
@@ -154,13 +274,19 @@ class Agent():
 
         No output parameters are returned, but the method updates the assistant's details on the OpenAI server and locally updates the settings file.
         """
+        tool_resources = copy.deepcopy(self.tool_resources)
+        if tool_resources and tool_resources.get('file_search'):
+            tool_resources['file_search'].pop('vector_stores', None)
 
         params = {
             "name": self.name,
             "description": self.description,
             "instructions": self.instructions,
             "tools": self.get_oai_tools(),
-            "file_ids": self.file_ids,
+            "tool_resources": tool_resources,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "response_format": self.response_format,
             "metadata": self.metadata,
             "model": self.model
         }
@@ -179,8 +305,6 @@ class Agent():
                 f_path_new = file_name + "_" + id + file_ext
                 os.rename(f_path, f_path_new)
                 return f_path_new
-            else:
-                raise Exception("Items in files folder must be files.")
 
         def get_id_from_file(f_path):
             """Get file id from file name"""
@@ -192,10 +316,11 @@ class Agent():
                     return file_name[-1] if "file-" in file_name[-1] else None
                 else:
                     return None
-            else:
-                raise Exception("Items in files folder must be files.")
 
         files_folders = self.files_folder if isinstance(self.files_folder, list) else [self.files_folder]
+
+        file_search_ids = []
+        code_interpreter_ids = []
 
         for files_folder in files_folders:
             if isinstance(files_folder, str):
@@ -212,47 +337,77 @@ class Agent():
 
                     f_paths = [os.path.join(f_path, f) for f in f_paths]
 
-                    # uploading files
+                    code_interpreter_file_extensions = [
+                        ".json",  # JSON
+                        ".csv",  # CSV
+                        ".xml",  # XML
+                        ".jpeg",  # JPEG
+                        ".jpg",  # JPEG
+                        ".gif",  # GIF
+                        ".png",  # PNG
+                        ".zip"  # ZIP
+                    ]
+
                     for f_path in f_paths:
+                        file_ext = os.path.splitext(f_path)[1]
+
                         f_path = f_path.strip()
                         file_id = get_id_from_file(f_path)
                         if file_id:
                             print("File already uploaded. Skipping... " + os.path.basename(f_path))
-                            self.file_ids.append(file_id)
                         else:
                             print("Uploading new file... " + os.path.basename(f_path))
                             with open(f_path, 'rb') as f:
-                                file_id = self.client.files.create(file=f, purpose="assistants").id
-                                self.file_ids.append(file_id)
+                                file_id = self.client.with_options(
+                                    timeout=80 * 1000,
+                                ).files.create(file=f, purpose="assistants").id
                                 f.close()
                             add_id_to_file(f_path, file_id)
-                else:
-                    raise Exception("Files folder path is not a directory.", f_path)
-            else:
-                raise Exception("Files folder path must be a string or list of strings.")
 
-        if Retrieval not in self.tools and CodeInterpreter not in self.tools and self.file_ids:
-            print("Detected files without Retrieval. Adding Retrieval tool...")
-            self.add_tool(Retrieval)
+                        if file_ext in code_interpreter_file_extensions:
+                            code_interpreter_ids.append(file_id)
+                        else:
+                            file_search_ids.append(file_id)
+                else:
+                    print(f"Files folder '{f_path}' is not a directory. Skipping...", )
+            else:
+                print("Files folder path must be a string or list of strings. Skipping... ", files_folder)
+
+        if FileSearch not in self.tools and file_search_ids:
+            print("Detected files without FileSearch. Adding FileSearch tool...")
+            self.add_tool(FileSearch)
+        if CodeInterpreter not in self.tools and code_interpreter_ids:
+            print("Detected files without FileSearch. Adding FileSearch tool...")
+            self.add_tool(CodeInterpreter)
+
+        self.add_file_ids(file_search_ids, "file_search")
+        self.add_file_ids(code_interpreter_ids, "code_interpreter")
 
     # --- Tool Methods ---
 
+    # TODO: fix 2 methods below
     def add_tool(self, tool):
         if not isinstance(tool, type):
             raise Exception("Tool must not be initialized.")
-        if issubclass(tool, Retrieval):
+        if issubclass(tool, FileSearch):
             # check that tools name is not already in tools
             for t in self.tools:
-                if issubclass(t, Retrieval):
+                if issubclass(t, FileSearch):
                     return
             self.tools.append(tool)
         elif issubclass(tool, CodeInterpreter):
+            for t in self.tools:
+                if issubclass(t, CodeInterpreter):
+                    return
+            self.tools.append(tool)
+        elif issubclass(tool, Retrieval):
             for t in self.tools:
                 if issubclass(t, Retrieval):
                     return
             self.tools.append(tool)
         elif issubclass(tool, BaseTool):
             if tool.__name__ == "ExampleTool":
+                print("Skipping importing ExampleTool...")
                 return
             for t in self.tools:
                 if t.__name__ == tool.__name__:
@@ -268,9 +423,11 @@ class Agent():
                 print(tool)
                 raise Exception("Tool must not be initialized.")
 
-            if issubclass(tool, Retrieval):
-                tools.append(tool().model_dump())
+            if issubclass(tool, FileSearch):
+                tools.append(tool(file_search=self.file_search).model_dump(exclude_none=True))
             elif issubclass(tool, CodeInterpreter):
+                tools.append(tool().model_dump())
+            elif issubclass(tool, Retrieval):
                 tools.append(tool().model_dump())
             elif issubclass(tool, BaseTool):
                 tools.append({
@@ -322,16 +479,18 @@ class Agent():
                         for tool in tools:
                             self.add_tool(tool)
                 else:
-                    raise Exception("Schemas folder path is not a directory.")
+                    print("Schemas folder path is not a directory. Skipping... ", f_path)
             else:
-                raise Exception("Schemas folder path must be a string or list of strings.")
+                print("Schemas folder path must be a string or list of strings. Skipping... ", schemas_folder)
 
     def _parse_tools_folder(self):
         if not self.tools_folder:
             return
+
         if not os.path.isdir(self.tools_folder):
             self.tools_folder = os.path.join(self.get_class_folder_path(), self.tools_folder)
             self.tools_folder = os.path.normpath(self.tools_folder)
+
         if os.path.isdir(self.tools_folder):
             f_paths = os.listdir(self.tools_folder)
             f_paths = [f for f in f_paths if not f.startswith(".") and not f.startswith("__")]
@@ -344,112 +503,94 @@ class Agent():
                         tool = ToolFactory.from_file(f_path)
                         self.add_tool(tool)
                     except Exception as e:
-                        print("Error parsing tool: " + os.path.basename(f_path))
-                        raise e
+                        print(f"Error parsing tool file {os.path.basename(f_path)}: {e}. Skipping...")
                 else:
-                    raise Exception("Items in tools folder must be files: " + f_path)
+                    print("Items in tools folder must be files. Skipping... ", f_path)
         else:
-            raise Exception("Tools folder path is not a directory.")
+            print("Tools folder path is not a directory. Skipping... ", self.tools_folder)
 
     def get_openapi_schema(self, url):
         """Get openapi schema that contains all tools from the agent as different api paths. Make sure to call this after agency has been initialized."""
         if self.assistant is None:
-            raise Exception("Assistant is not initialized. Please initialize the agency first, before using this method")
+            raise Exception(
+                "Assistant is not initialized. Please initialize the agency first, before using this method")
 
-        schema = {
-            "openapi": "3.1.0",
-            "info": {
-                "title": self.name,
-                "description": self.description if self.description else "",
-                "version": "v1.0.0"
-            },
-            "servers": [
-                {
-                    "url": url,
-                }
-            ],
-            "paths": {},
-            "components": {
-                "schemas": {},
-                "securitySchemes": {
-                    "apiKey": {
-                        "type": "apiKey"
-                    }
-                }
-            },
-        }
-
-        for tool in self.tools:
-            if issubclass(tool, BaseTool):
-                openai_schema = tool.openai_schema
-                defs = {}
-                if '$defs' in openai_schema['parameters']:
-                    defs = openai_schema['parameters']['$defs']
-                    del openai_schema['parameters']['$defs']
-
-                schema['paths']["/" + openai_schema['name']] = {
-                    "post": {
-                        "description": openai_schema['description'],
-                        "operationId": openai_schema['name'],
-                        "parameters": [],
-                        "requestBody": {
-                            "content": {
-                                "application/json": {
-                                    "schema": openai_schema['parameters']
-                                }
-                            },
-                            "required": True,
-                        },
-                        "deprecated": False,
-                        "security": [
-                            {
-                                "apiKey": []
-                            }
-                        ],
-                        "x-openai-isConsequential": False,
-                    }
-                }
-
-                if defs:
-                    schema['components']['schemas'].update(**defs)
-
-                print(openai_schema)
-
-        schema = json.dumps(schema, indent=2).replace("#/$defs/", "#/components/schemas/")
-
-        return schema
+        return ToolFactory.get_openapi_schema(self.tools, url)
 
     # --- Settings Methods ---
 
-    def _check_parameters(self, assistant_settings):
+    def _check_parameters(self, assistant_settings, debug=False):
         """
         Checks if the agent's parameters match with the given assistant settings.
 
         Parameters:
             assistant_settings (dict): A dictionary containing the settings of an assistant.
+            debug (bool): If True, prints debug statements. Default is False.
 
         Returns:
             bool: True if all the agent's parameters match the assistant settings, False otherwise.
 
         This method compares the current agent's parameters such as name, description, instructions, tools, file IDs, metadata, and model with the given assistant settings. It uses DeepDiff to compare complex structures like tools and metadata. If any parameter does not match, it returns False; otherwise, it returns True.
         """
-
         if self.name != assistant_settings['name']:
+            if debug:
+                print(f"Name mismatch: {self.name} != {assistant_settings['name']}")
             return False
+
         if self.description != assistant_settings['description']:
+            if debug:
+                print(f"Description mismatch: {self.description} != {assistant_settings['description']}")
             return False
+
         if self.instructions != assistant_settings['instructions']:
+            if debug:
+                print(f"Instructions mismatch: {self.instructions} != {assistant_settings['instructions']}")
             return False
+
         tools_diff = DeepDiff(self.get_oai_tools(), assistant_settings['tools'], ignore_order=True)
         if tools_diff != {}:
+            if debug:
+                print(f"Tools mismatch: {tools_diff}")
+                print("local tools: ", self.get_oai_tools())
+                print("assistant tools: ", assistant_settings['tools'])
             return False
-        if set(self.file_ids) != set(assistant_settings['file_ids']):
+
+        if self.temperature != assistant_settings['temperature']:
+            if debug:
+                print(f"Temperature mismatch: {self.temperature} != {assistant_settings['temperature']}")
             return False
+
+        if self.top_p != assistant_settings['top_p']:
+            if debug:
+                print(f"Top_p mismatch: {self.top_p} != {assistant_settings['top_p']}")
+            return False
+
+        tool_resources_settings = copy.deepcopy(self.tool_resources)
+        if tool_resources_settings and tool_resources_settings.get('file_search'):
+            tool_resources_settings['file_search'].pop('vector_stores', None)
+        tool_resources_diff = DeepDiff(tool_resources_settings, assistant_settings['tool_resources'], ignore_order=True)
+        if tool_resources_diff != {}:
+            if debug:
+                print(f"Tool resources mismatch: {tool_resources_diff}")
+            return False
+
         metadata_diff = DeepDiff(self.metadata, assistant_settings['metadata'], ignore_order=True)
         if metadata_diff != {}:
+            if debug:
+                print(f"Metadata mismatch: {metadata_diff}")
             return False
+
         if self.model != assistant_settings['model']:
+            if debug:
+                print(f"Model mismatch: {self.model} != {assistant_settings['model']}")
             return False
+
+        response_format_diff = DeepDiff(self.response_format, assistant_settings['response_format'], ignore_order=True)
+        if response_format_diff != {}:
+            if debug:
+                print(f"Response format mismatch: {response_format_diff}")
+            return False
+
         return True
 
     def _save_settings(self):
@@ -482,6 +623,48 @@ class Agent():
 
     # --- Helper Methods ---
 
+    def add_file_ids(self, file_ids: List[str], tool_resource: Literal["code_interpreter", "file_search"]):
+        if not file_ids:
+            return
+
+        if self.tool_resources is None:
+            self.tool_resources = {}
+
+        if tool_resource == "code_interpreter":
+            if CodeInterpreter not in self.tools:
+                raise Exception("CodeInterpreter tool not found in tools.")
+
+            if tool_resource not in self.tool_resources or self.tool_resources[
+                tool_resource] is None:
+                self.tool_resources[tool_resource] = {
+                    "file_ids": file_ids
+                }
+
+            self.tool_resources[tool_resource]['file_ids'] = file_ids
+        elif tool_resource == "file_search":
+            if FileSearch not in self.tools:
+                raise Exception("FileSearch tool not found in tools.")
+
+            if tool_resource not in self.tool_resources or self.tool_resources[
+                tool_resource] is None:
+                self.tool_resources[tool_resource] = {
+                    "vector_stores": [{
+                        "file_ids": file_ids
+                    }]
+                }
+            elif not self.tool_resources[tool_resource].get('vector_store_ids'):
+                self.tool_resources[tool_resource]['vector_stores'] = [{
+                    "file_ids": file_ids
+                }]
+            else:
+                vector_store_id = self.tool_resources[tool_resource]['vector_store_ids'][0]
+                self.client.beta.vector_stores.file_batches.create(
+                    vector_store_id=vector_store_id,
+                    file_ids=file_ids
+                )
+        else:
+            raise Exception("Invalid tool resource.")
+
     def get_settings_path(self):
         return self.settings_path
 
@@ -496,14 +679,16 @@ class Agent():
         elif "./instructions.md" in self.instructions or "./instructions.txt" in self.instructions:
             raise Exception("Instructions file not found.")
 
-
     def get_class_folder_path(self):
         try:
             # First, try to use the __file__ attribute of the module
             return os.path.abspath(os.path.dirname(self.__module__.__file__))
-        except AttributeError:
+        except (TypeError, OSError, AttributeError) as e:
             # If that fails, fall back to inspect
-            class_file = inspect.getfile(self.__class__)
+            try:
+                class_file = inspect.getfile(self.__class__)
+            except (TypeError, OSError, AttributeError) as e:
+                return "./"
             return os.path.abspath(os.path.realpath(os.path.dirname(class_file)))
 
     def add_shared_instructions(self, instructions: str):
@@ -521,12 +706,29 @@ class Agent():
 
     # --- Cleanup Methods ---
     def delete(self):
+        """Deletes assistant, all vector stores, and all files associated with the agent."""
         self._delete_assistant()
         self._delete_files()
         self._delete_settings()
 
     def _delete_files(self):
-        for file_id in self.file_ids:
+        if not self.tool_resources:
+            return
+
+        file_ids = []
+        if self.tool_resources.get('code_interpreter'):
+            file_ids = self.tool_resources['code_interpreter'].get('file_ids', [])
+
+        if self.tool_resources.get('file_search'):
+            file_search_vector_store_ids = self.tool_resources['file_search'].get('vector_store_ids', [])
+            for vector_store_id in file_search_vector_store_ids:
+                files = self.client.beta.vector_stores.files.list(vector_store_id=vector_store_id, limit=100)
+                for file in files:
+                    file_ids.append(file.id)
+
+                self.client.beta.vector_stores.delete(vector_store_id)
+
+        for file_id in file_ids:
             self.client.files.delete(file_id)
 
     def _delete_assistant(self):

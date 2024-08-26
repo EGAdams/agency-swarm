@@ -19,30 +19,30 @@ class CreateAgencyFolder(BaseTool):
     )
     agency_chart: str = Field(
         ..., description="Agency chart to be passed into the Agency class.",
-        examples=["[ceo, [ceo, dev], [ceo, va], [dev, va] ]"]
+        examples=["[ceo, [ceo, dev], [ceo, va], [dev, va]]"]
     )
     manifesto: str = Field(
         ..., description="Manifesto for the agency, describing its goals and additional context shared by all agents "
-                         "in markdown format. It must include a brief description of each agent, its purpose and "
-                         "whether it needs to utilize any tools or APIs.",
+                         "in markdown format. It must include information about the working environment, the mission "
+                         "and the goals of the agency. Do not add descriptions of the agents themselves or the agency structure.",
     )
 
     def run(self):
-        if not self.shared_state.get("default_folder"):
-            self.shared_state.set('default_folder', Path.cwd())
+        if not self._shared_state.get("default_folder"):
+            self._shared_state.set('default_folder', Path.cwd())
 
-        if self.shared_state.get("agency_name") is None:
+        if self._shared_state.get("agency_name") is None:
             os.mkdir(self.agency_name)
             os.chdir("./" + self.agency_name)
-            self.shared_state.set("agency_name", self.agency_name)
-            self.shared_state.set("agency_path", Path("./").resolve())
-        elif self.shared_state.get("agency_name") == self.agency_name and os.path.exists(self.shared_state.get("agency_path")):
-            os.chdir(self.shared_state.get("agency_path"))
+            self._shared_state.set("agency_name", self.agency_name)
+            self._shared_state.set("agency_path", Path("./").resolve())
+        elif self._shared_state.get("agency_name") == self.agency_name and os.path.exists(self._shared_state.get("agency_path")):
+            os.chdir(self._shared_state.get("agency_path"))
             for file in os.listdir():
                 if file != "__init__.py" and os.path.isfile(file):
                     os.remove(file)
         else:
-            os.mkdir(self.shared_state.get("agency_path"))
+            os.mkdir(self._shared_state.get("agency_path"))
             os.chdir("./" + self.agency_name)
 
         # check that agency chart is valid
@@ -60,18 +60,27 @@ class CreateAgencyFolder(BaseTool):
 
         # create agency.py
         with open("agency.py", "w") as f:
-            f.write("from agency_swarm import Agency\n\n\n")
-            f.write(f"agency = Agency({agency_chart},\nshared_instructions='./agency_manifesto.md')\n\n")
-            f.write("if __name__ == '__main__':\n")
-            f.write("    agency.demo_gradio()\n")
+            f.write(agency_py.format(agency_chart=agency_chart))
 
         # write manifesto
         path = os.path.join("agency_manifesto.md")
         with open(path, "w") as f:
             f.write(self.manifesto)
 
-        os.chdir(self.shared_state.get('default_folder'))
+        os.chdir(self._shared_state.get('default_folder'))
 
         return f"Agency folder has been created. You can now tell AgentCreator to create agents for {self.agency_name}.\n"
 
 
+agency_py = """from agency_swarm import Agency
+
+
+agency = Agency({agency_chart},
+                shared_instructions='./agency_manifesto.md', # shared instructions for all agents
+                max_prompt_tokens=25000, # default tokens in conversation for all agents
+                temperature=0.3, # default temperature for all agents
+                )
+                
+if __name__ == '__main__':
+    agency.demo_gradio()
+"""

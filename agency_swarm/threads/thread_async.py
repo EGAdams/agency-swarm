@@ -1,5 +1,7 @@
 import threading
-from typing import Literal
+from typing import Union, Optional, List
+
+from openai.types.beta import AssistantToolChoice
 
 from agency_swarm.agents import Agent
 from agency_swarm.threads import Thread
@@ -7,14 +9,29 @@ from agency_swarm.user import User
 
 
 class ThreadAsync(Thread):
-    def __init__(self, agent: Literal[Agent, User], recipient_agent: Agent):
+    def __init__(self, agent: Union[Agent, User], recipient_agent: Agent):
         super().__init__(agent, recipient_agent)
         self.pythread = None
         self.response = None
+        self.async_mode = False 
 
-    def worker(self, message: str, message_files=None):
-        gen = super().get_completion(message=message, message_files=message_files,
-                                  yield_messages=False) # yielding is not supported in async mode
+    def worker(self,
+               message: str,
+               message_files: List[str] = None,
+               attachments: Optional[List[dict]] = None,
+               recipient_agent=None,
+               additional_instructions: str = None,
+               tool_choice: AssistantToolChoice = None
+               ):
+        self.async_mode = False 
+
+        gen = self.get_completion(message=message,
+                                    message_files=message_files,
+                                    attachments=attachments,
+                                    recipient_agent=recipient_agent,
+                                    additional_instructions=additional_instructions,
+                                    tool_choice=tool_choice)
+
         while True:
             try:
                 next(gen)
@@ -24,7 +41,14 @@ class ThreadAsync(Thread):
 
         return
 
-    def get_completion_async(self, message: str, message_files=None):
+    def get_completion_async(self,
+                             message: str,
+                             message_files: List[str] = None,
+                             attachments: Optional[List[dict]] = None,
+                             recipient_agent=None,
+                             additional_instructions: str = None,
+                             tool_choice: AssistantToolChoice = None,
+                             ):
         if self.pythread and self.pythread.is_alive():
             return "System Notification: 'Agent is busy, so your message was not received. Please always use 'GetResponse' tool to check for status first, before using 'SendMessage' tool again for the same agent.'"
         elif self.pythread and not self.pythread.is_alive():
@@ -38,7 +62,7 @@ class ThreadAsync(Thread):
             return "System Notification: 'Agent is busy, so your message was not received. Please always use 'GetResponse' tool to check for status first, before using 'SendMessage' tool again for the same agent.'"
 
         self.pythread = threading.Thread(target=self.worker,
-                                         args=(message, message_files))
+                                         args=(message, message_files, attachments, recipient_agent, additional_instructions, tool_choice))
 
         self.pythread.start()
 

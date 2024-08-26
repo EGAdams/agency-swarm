@@ -1,20 +1,28 @@
 from typing import Literal
 import hashlib
 from rich.markdown import Markdown
-from rich.console import Console
-
-from agency_swarm.util.oai import get_openai_client
+from rich.console import Console, Group
+from rich.live import Live
 
 console = Console()
 
 class MessageOutput:
-    def __init__(self, msg_type: Literal["function", "function_output", "text", "system"], sender_name: str, receiver_name: str, content):
+    def __init__(self, msg_type: Literal["function", "function_output", "text", "system"], sender_name: str,
+                 receiver_name: str, content, obj=None):
+        """Initialize a message object with sender, receiver, content and type.
+
+        Args:
+            msg_type (Literal["function", "function_output", "text", "system"]): Type of message.
+            sender_name (str): Name of the sender.
+            receiver_name (str): Name of the receiver.
+            content: Content of the message.
+            obj: Optional OpenAI object that is causing the message.
+        """
         self.msg_type = msg_type
         self.sender_name = str(sender_name)
         self.receiver_name = str(receiver_name)
         self.content = str(content)
-
-        self.client = get_openai_client()
+        self.obj = obj
 
     def hash_names_to_color(self):
         if self.msg_type == "function" or self.msg_type == "function_output":
@@ -36,28 +44,27 @@ class MessageOutput:
     def cprint(self):
         console.rule()
 
-        emoji = self.get_sender_emoji()
+        header_text = self.formatted_header
+        md_content = Markdown(self.content)
 
-        header = emoji + " " + self.get_formatted_header()
+        render_group = Group(header_text, md_content)
 
-        # color = self.hash_names_to_color()
+        console.print(render_group, end="")
 
-        console.print(header)
-
-        md = Markdown(self.content)
-
-        console.print(md)
+    @property
+    def formatted_header(self):
+        return self.get_formatted_header()
 
     def get_formatted_header(self):
         if self.msg_type == "function":
-            text = f"{self.sender_name} 🛠️ Executing Function"
+            text = f"{self.sender_emoji} {self.sender_name} 🛠️ Executing Function"
             return text
 
         if self.msg_type == "function_output":
             text = f"{self.sender_name} ⚙️ Function Output"
             return text
 
-        text = f"{self.sender_name} 🗣️ @{self.receiver_name}"
+        text = f"{self.sender_emoji} {self.sender_name} 🗣️ @{self.receiver_name}"
 
         return text
 
@@ -65,6 +72,10 @@ class MessageOutput:
         header = self.get_formatted_header()
         content = f"\n{self.content}\n"
         return header + content
+
+    @property
+    def sender_emoji(self):
+        return self.get_sender_emoji()
 
     def get_sender_emoji(self):
         if self.msg_type == "system":
@@ -94,3 +105,35 @@ class MessageOutput:
 
         return emojis[emoji_index]
 
+
+class MessageOutputLive(MessageOutput):
+    live_display = None
+
+    def __init__(self, msg_type: Literal["function", "function_output", "text", "system"], sender_name: str,
+                 receiver_name: str, content):
+        super().__init__(msg_type, sender_name, receiver_name, content)
+        # Initialize Live display if not already done
+        self.live_display = Live(vertical_overflow="visible")
+        self.live_display.start()
+
+        console.rule()
+
+    def __del__(self):
+        if self.live_display:
+            self.live_display.stop()
+            self.live_display = None
+
+    def cprint_update(self, snapshot):
+        """
+        Update the display with new snapshot content.
+        """
+        self.content = snapshot  # Update content with the latest snapshot
+
+        header_text = self.formatted_header
+        md_content = Markdown(self.content)
+
+        # Creating a group of renderables for the live display
+        render_group = Group(header_text, md_content)
+
+        # Update the Live display
+        self.live_display.update(render_group)
